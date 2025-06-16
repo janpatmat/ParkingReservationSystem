@@ -1,0 +1,39 @@
+version: '3.9'
+
+services:
+  frontend:
+    build: ./frontend
+    volumes:
+      - ./frontend:/app
+      - /app/node_modules
+    ports:
+      - "3000:3000"
+    stdin_open: true
+    tty: true
+    command: sh -c "npm install && npm start"
+
+  db:
+    image: mysql:8
+    environment:
+      MYSQL_DATABASE: django_db
+      MYSQL_ROOT_PASSWORD: yourpassword
+    ports:
+      - "3306:3306"
+    volumes:
+      - dbdata:/var/lib/mysql
+  backend:
+    build: ./backend
+    command: sh -c "python manage.py makemigrations && python manage.py migrate && python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - ./backend:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      - db
+    environment:
+      - DB_HOST=db
+      - DB_NAME=django_db
+      - DB_USER=root
+      - DB_PASS=yourpassword
+volumes:
+  dbdata:
