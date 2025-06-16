@@ -405,3 +405,12 @@ class AdminLoginView(APIView):
             })
 
         return Response({"error": "Invalid credentials or not an admin"}, status=401)
+    
+
+class ArchiveListView(APIView):
+    permission_classes = [IsAdminUser]
+
+    def get(self, request):
+        archives = Archive.objects.all().order_by('-date_out')
+        serializer = ArchiveSerializer(archives, many=True)
+        return Response(serializer.data)
