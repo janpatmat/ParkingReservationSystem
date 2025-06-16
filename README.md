@@ -34,6 +34,7 @@ A **Smart Parking Web Application** that automates the management of parking slo
    npm install
    npm start
   This will launch the React app on http://localhost:3000.
+  
 2.  Start the Backend
 ```bash
   cd backend
@@ -74,7 +75,7 @@ A **Smart Parking Web Application** that automates the management of parking slo
   - No custom table were made for users
   - Custom API endpoints are built with Django REST Framework.
  
-    ### 🔮 Future Improvements (Given More Time)
+ ### 🔮 Future Improvements (Given More Time)
 
 If given additional time, the following features and improvements would be implemented:
 
