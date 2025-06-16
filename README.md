@@ -74,13 +74,15 @@ A **Smart Parking Web Application** that automates the management of parking slo
   - JWT authentication is used for secure login and token handling.
   - No custom table were made for users
   - Custom API endpoints are built with Django REST Framework.
+  - Built in simulation clock was used for time related functions (but works more consistently when adjusting the DAY rather than the TIME)
  
  ### 🔮 Future Improvements (Given More Time)
 
 If given additional time, the following features and improvements would be implemented:
 
 - ✏️ Update and delete parking lots  
-- 👤 Update user profile functionality  
+- 👤 Update user profile functionality
+- ⏰ Improved consistency in time related functions
 - 🗑️ Delete users as an admin  
 - 🎨 Improved UI design and styling  
 - ☁️ Host the project on AWS EC2  
