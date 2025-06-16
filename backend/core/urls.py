@@ -1,5 +1,5 @@
 from django.urls import path
-from .views import AdminLoginView, ArchiveCreateView, ArchiveListView, CancelApprovedAndArchiveView, SimulatedTimeCheckView, CancelApprovedReservationView, ApprovedReservationsBySpotView, CancelReservationView, ApproveReservationView, ReserveUserListView, UserApprovedReservationView, UserReservationStatusView, ReserveCreateView, RegisterView, LoginView, AdminOnlyView, ParkingLocationCreateView, getLocation, getParkingSpot, ParkingSpotCreateView
+from .views import AdminLoginView, ArchiveCreateView, ArchiveListView, CancelApprovedAndArchiveView, SimulatedTimeCheckView, CancelApprovedReservationView, ApprovedReservationsBySpotView, CancelReservationView, ApproveReservationView, ReserveUserListView, UserApprovedReservationView, UserReservationStatusView, ReserveCreateView, RegisterView, LoginView, AdminOnlyView, ParkingLocationCreateView, getLocation, getParkingSpot, ParkingSpotCreateView, user_info
 
 urlpatterns = [
     path('register/', RegisterView.as_view()),
@@ -23,4 +23,6 @@ urlpatterns = [
     path('login/user/', LoginView.as_view(), name='user-login'),
     path('admin-login/', AdminLoginView.as_view(), name='admin-login'),
     path('archive/list/', ArchiveListView.as_view(), name='archive-list'),
+    path('api/user/', user_info),
+
 ]
