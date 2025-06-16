@@ -53,3 +53,12 @@ class customer(models.Model):
 
 
 
+class Archive(models.Model):
+    customer_name = models.CharField(max_length=255, null=True, blank=True)
+    spotID = models.ForeignKey('parkingSpot', on_delete=models.SET_NULL, null=True, blank=True)
+    date_in = models.DateTimeField()
+    date_out = models.DateTimeField()
+    status = models.CharField(max_length=50)
+
+    class Meta:
+        db_table = 'archive'

@@ -6,8 +6,8 @@ from rest_framework.decorators import api_view
 from rest_framework_simplejwt.tokens import RefreshToken
 from django.contrib.auth import authenticate
 from rest_framework import status
-from .serializers import ParkingLocationSerializer, parkingSpotSerializer
-from .models import parkingLocation, parkingSpot, reserveTable, approvedreserveTable
+from .serializers import ArchiveSerializer, ParkingLocationSerializer, parkingSpotSerializer
+from .models import parkingLocation, parkingSpot, reserveTable, approvedreserveTable, Archive
 from django.shortcuts import get_object_or_404
 from django.utils.dateparse import parse_datetime
 class RegisterView(APIView):
@@ -217,10 +217,26 @@ class ApproveReservationView(APIView):
 class CancelReservationView(APIView):
     def delete(self, request, user_id):
         try:
-            deleted_count, _ = reserveTable.objects.filter(customerID=user_id).delete()
-            return Response({'message': f'{deleted_count} reservation(s) canceled.'}, status=status.HTTP_200_OK)
+            reservations = reserveTable.objects.filter(customerID=user_id)
+            archived_count = 0
+
+            for res in reservations:
+                Archive.objects.create(
+                    customer_name=res.customerID.username,
+                    spotID=res.spotID,
+                    date_in=res.date_in,
+                    date_out=res.date_out,
+                    status="canceled"
+                )
+                archived_count += 1
+
+            deleted_count, _ = reservations.delete()
+
+            return Response({'message': f'{archived_count} reservation(s) archived and {deleted_count} deleted.'},
+                            status=status.HTTP_200_OK)
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         
 
 class ApprovedReservationsBySpotView(APIView):
@@ -249,14 +265,58 @@ class CancelApprovedReservationView(APIView):
 
         try:
             reservation = approvedreserveTable.objects.get(pk=approved_id)
+
+            # Archive before deletion
+            Archive.objects.create(
+                customer_name=reservation.customerID.username,
+                spotID=reservation.spotID,
+                date_in=reservation.date_in,
+                date_out=reservation.date_out,
+                status="canceled"
+            )
+
             reservation.delete()
 
-            return Response({'message': 'Reservation cancelled'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Reservation cancelled and archived'}, status=status.HTTP_200_OK)
 
         except approvedreserveTable.DoesNotExist:
             return Response({'error': 'Reservation not found'}, status=status.HTTP_404_NOT_FOUND)
 
 
+class ArchiveCreateView(APIView):
+    def post(self, request):
+        serializer = ArchiveSerializer(data=request.data)
+        if serializer.is_valid():
+            serializer.save()
+            return Response({'message': 'Reservation archived successfully.'}, status=status.HTTP_201_CREATED)
+        return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
+    
+class CancelApprovedAndArchiveView(APIView):
+    def post(self, request):
+        approved_id = request.data.get('approvedreserveID')
+
+        if not approved_id:
+            return Response({'error': 'approvedreserveID is required'}, status=status.HTTP_400_BAD_REQUEST)
+
+        try:
+            reservation = approvedreserveTable.objects.get(pk=approved_id)
+
+            # Archive the canceled reservation
+            # Archive.objects.create(
+            #     customer_name=reservation.customerID.username if reservation.customerID else "Unknown",
+            #     spotID=reservation.spotID,
+            #     date_in=reservation.date_in,
+            #     date_out=reservation.date_out,
+            #     status='canceled'
+            # )
+
+            reservation.delete()
+
+            return Response({'message': 'Reservation canceled and archived.'}, status=status.HTTP_200_OK)
+
+        except approvedreserveTable.DoesNotExist:
+            return Response({'error': 'Reservation not found'}, status=status.HTTP_404_NOT_FOUND)
+            
 class SimulatedTimeCheckView(APIView):
     def post(self, request):
         current_time = request.data.get('current_time')
@@ -266,20 +326,59 @@ class SimulatedTimeCheckView(APIView):
         try:
             now = parse_datetime(current_time)
 
-            # Clean reserveTable
+            # === Handle expired pending reservations ===
             expired_reserves = reserveTable.objects.filter(date_out__lt=now)
+            for res in expired_reserves:
+                Archive.objects.create(
+                    customer_name=res.customerID.username,
+                    spotID=res.spotID,
+                    date_in=res.date_in,
+                    date_out=res.date_out,
+                    status="canceled"
+                )
             expired_reserves.delete()
-            
 
-            # Clean approvedreserveTable and nullify related parkingSpots
+            # === Handle expired approved reservations ===
             expired_approved = approvedreserveTable.objects.filter(date_out__lt=now)
             for entry in expired_approved:
-                
+                Archive.objects.create(
+                    customer_name=entry.customerID.username,
+                    spotID=entry.spotID,
+                    date_in=entry.date_in,
+                    date_out=entry.date_out,
+                    status="finished"
+                )
                 entry.spotID.save()
                 entry.delete()
-                
 
-            return Response({'message': 'Expired reservations removed'}, status=status.HTTP_200_OK)
+            return Response({'message': 'Expired reservations cleaned and archived.'}, status=status.HTTP_200_OK)
 
         except Exception as e:
             return Response({'error': str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        
+
+
+class UserApprovedReservationView(APIView):
+    permission_classes = [IsAuthenticated]
+
+    def get(self, request):
+        user = request.user  # Automatically resolved from JWT
+        try:
+            reservation = approvedreserveTable.objects.filter(customerID=user).first()
+
+            if not reservation:
+                return Response({"message": "No approved reservation found."}, status=status.HTTP_404_NOT_FOUND)
+
+            data = {
+                "approvedreserveID": reservation.approvedreserveID,
+                "spotID": reservation.spotID.spotID if reservation.spotID else None,
+                "date_in": reservation.date_in,
+                "date_out": reservation.date_out,
+                "customerID": user.id,
+                "customerUsername": user.username
+            }
+
+            return Response(data, status=status.HTTP_200_OK)
+
+        except Exception as e:
+            return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)

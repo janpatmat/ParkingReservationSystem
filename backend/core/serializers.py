@@ -1,6 +1,6 @@
 # serializers.py
 from rest_framework import serializers
-from .models import parkingLocation, parkingSpot, reserveTable
+from .models import parkingLocation, parkingSpot, reserveTable, Archive
 
 class ParkingLocationSerializer(serializers.ModelSerializer):
     class Meta:
@@ -20,4 +20,10 @@ class parkingSpotSerializer(serializers.ModelSerializer):
 class ReserveTableInitializer(serializers.ModelSerializer):
     class Meta:
         model = reserveTable
+        fields = '__all__'
+
+
+class ArchiveSerializer(serializers.ModelSerializer):
+    class Meta:
+        model = Archive
         fields = '__all__'
