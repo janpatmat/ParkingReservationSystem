@@ -33,25 +33,7 @@ class RegisterView(APIView):
             "is_staff": user.is_staff
         }, status=status.HTTP_201_CREATED)
 
-class LoginView(APIView):
-    permission_classes = [AllowAny]
 
-    def post(self, request):
-        username = request.data.get("username")
-        password = request.data.get("password")
-        user = authenticate(username=username, password=password)
-        
-        if user:
-            refresh = RefreshToken.for_user(user)
-            return Response({
-                'refresh': str(refresh),
-                'access': str(refresh.access_token),
-                'username': user.username,
-                'is_staff': user.is_staff,  # admin = True
-                
-            })
-
-        return Response({"error": "Invalid credentials"}, status=401)
     
 class AdminOnlyView(APIView):
     permission_classes = [IsAuthenticated]
@@ -382,3 +364,44 @@ class UserApprovedReservationView(APIView):
 
         except Exception as e:
             return Response({"error": str(e)}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+class LoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        user = authenticate(username=username, password=password)
+        
+        if user:
+            if user.is_staff:
+                return Response({"error": "Admins must log in through the admin portal."}, status=403)
+
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'username': user.username,
+                'is_staff': user.is_staff,
+            })
+
+        return Response({"error": "Invalid credentials"}, status=401)
+    
+class AdminLoginView(APIView):
+    permission_classes = [AllowAny]
+
+    def post(self, request):
+        username = request.data.get("username")
+        password = request.data.get("password")
+        user = authenticate(username=username, password=password)
+
+        if user and user.is_staff:
+            refresh = RefreshToken.for_user(user)
+            return Response({
+                'refresh': str(refresh),
+                'access': str(refresh.access_token),
+                'username': user.username,
+                'is_staff': user.is_staff,
+            })
+
+        return Response({"error": "Invalid credentials or not an admin"}, status=401)
